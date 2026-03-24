@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Party On, Comrade!</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --red: #cc0000; --dark-red: #8b0000; --green: #00cc00; --dark-green: #008800;
+  --black: #0a0a0a; --dark-bg: #111; --white: #e0e0e0; --dim: #666;
+  --gold: #ccaa00; --cyan: #00aacc; --purple: #8888cc; --orange: #cc8800; --brown: #998855;
+}
+body { background: var(--black); color: var(--green); font-family: 'Press Start 2P', monospace; overflow: hidden; height: 100vh; width: 100vw; image-rendering: pixelated; }
+body::after { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px); pointer-events: none; z-index: 9999; }
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%); pointer-events: none; z-index: 9998; }
+.screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.screen.active { display: flex; }
+#title-screen { flex-direction: column; align-items: center; justify-content: center; gap: 30px; }
+.title-star { color: var(--red); font-size: 60px; animation: pulse 2s ease-in-out infinite; text-shadow: 0 0 20px rgba(204,0,0,0.5); }
+.game-title { font-size: 22px; color: var(--red); text-align: center; text-shadow: 3px 3px 0 var(--dark-red), 0 0 20px rgba(204,0,0,0.3); line-height: 1.8; }
+.game-title .sub { font-size: 11px; color: var(--green); text-shadow: 2px 2px 0 #004400, 0 0 10px rgba(0,204,0,0.3); }
+.blink-prompt { font-size: 10px; color: var(--white); animation: blink 1.2s step-end infinite; cursor: pointer; padding: 15px 30px; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.8; } }
+#intro-screen { flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+.scroll-container { width: 100%; max-width: 700px; height: 70vh; overflow: hidden; position: relative; border: 2px solid var(--dark-green); }
+.scroll-container::before, .scroll-container::after { content: ''; position: absolute; left: 0; right: 0; height: 60px; z-index: 10; pointer-events: none; }
+.scroll-container::before { top: 0; background: linear-gradient(to bottom, var(--black), transparent); }
+.scroll-container::after { bottom: 0; background: linear-gradient(to top, var(--black), transparent); }
+.scroll-text { position: absolute; width: 100%; padding: 30px; font-size: 11px; line-height: 2.4; color: var(--green); text-align: center; top: 100%; animation: scrollUp 18s linear forwards; }
+@keyframes scrollUp { 0% { top: 100%; } 100% { top: -80%; } }
+.scroll-text .highlight { color: var(--red); text-shadow: 0 0 8px rgba(204,0,0,0.4); }
+.skip-btn { position: absolute; bottom: 20px; right: 30px; font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--dim); background: none; border: 1px solid var(--dim); padding: 8px 16px; cursor: pointer; z-index: 20; }
+.skip-btn:hover { color: var(--white); border-color: var(--white); }
+#char-screen { flex-direction: column; align-items: center; justify-content: center; gap: 25px; }
+.char-title { font-size: 14px; color: var(--red); text-shadow: 2px 2px 0 var(--dark-red); }
+.avatar-select { display: flex; gap: 40px; }
+.avatar-option { display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; padding: 15px 25px; border: 2px solid var(--dim); transition: all 0.2s; }
+.avatar-option:hover { border-color: var(--green); }
+.avatar-option.selected { border-color: var(--green); background: rgba(0,204,0,0.08); box-shadow: 0 0 15px rgba(0,204,0,0.2); }
+.avatar-pixel { font-size: 48px; line-height: 1; }
+.avatar-label { font-size: 8px; color: var(--white); }
+.name-input-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.name-input-group label { font-size: 9px; color: var(--green); }
+.name-input { font-family: 'Press Start 2P', monospace; font-size: 12px; background: var(--dark-bg); border: 2px solid var(--green); color: var(--green); padding: 10px 16px; text-align: center; outline: none; width: 280px; text-transform: uppercase; }
+.name-input:focus { box-shadow: 0 0 15px rgba(0,204,0,0.3); }
+.name-input::placeholder { color: var(--dim); font-size: 8px; }
+.btn { font-family: 'Press Start 2P', monospace; font-size: 10px; padding: 12px 30px; cursor: pointer; border: 2px solid; background: none; transition: all 0.15s; text-transform: uppercase; }
+.btn-red { color: var(--red); border-color: var(--red); }
+.btn-red:hover { background: var(--red); color: var(--black); box-shadow: 0 0 20px rgba(204,0,0,0.4); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn:disabled:hover { background: none; color: inherit; box-shadow: none; }
+/* DASHBOARD */
+#main-screen { flex-direction: column; padding: 10px; overflow-y: auto; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--dark-green); margin-bottom: 10px; background: rgba(0,80,0,0.08); flex-shrink: 0; }
+.top-bar-left { display: flex; align-items: center; gap: 15px; }
+.leader-info { display: flex; align-items: center; gap: 10px; font-size: 9px; }
+.leader-avatar-small { font-size: 20px; }
+.calendar { font-size: 9px; color: var(--red); text-shadow: 0 0 6px rgba(204,0,0,0.3); }
+.turn-counter { font-size: 7px; color: var(--dim); margin-top: 3px; }
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+.panel { border: 2px solid var(--dark-green); padding: 14px; background: rgba(0,40,0,0.06); display: flex; flex-direction: column; overflow-y: auto; }
+.panel-title { font-size: 9px; color: var(--red); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid var(--dark-red); text-shadow: 0 0 6px rgba(204,0,0,0.2); }
+.stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 8px; }
+.stat-label { color: var(--dim); }
+.stat-value { color: var(--green); }
+.stat-value.negative { color: var(--red); }
+.stat-value.positive { color: var(--green); }
+.faction-card { border: 1px solid var(--dim); padding: 10px; margin-bottom: 8px; position: relative; overflow: hidden; }
+.faction-card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px; }
+.faction-card.revolutionaries { border-color: #cc0000; } .faction-card.revolutionaries::before { background: #cc0000; }
+.faction-card.liberals { border-color: #00aacc; } .faction-card.liberals::before { background: #00aacc; }
+.faction-card.conservatives { border-color: #8888cc; } .faction-card.conservatives::before { background: #8888cc; }
+.faction-card.nationalists { border-color: #cc8800; } .faction-card.nationalists::before { background: #cc8800; }
+.faction-name { font-size: 8px; margin-bottom: 8px; color: var(--white); }
+.faction-bars { display: flex; flex-direction: column; gap: 5px; }
+.bar-row { display: flex; align-items: center; gap: 8px; font-size: 6px; }
+.bar-label { width: 55px; color: var(--dim); text-align: right; }
+.bar-track { flex: 1; height: 8px; background: var(--dark-bg); border: 1px solid #333; }
+.bar-fill { height: 100%; transition: width 0.5s ease; }
+.bar-fill.size { background: var(--green); } .bar-fill.approval-high { background: var(--green); } .bar-fill.approval-mid { background: var(--gold); } .bar-fill.approval-low { background: var(--red); }
+.bar-value { width: 35px; text-align: right; color: var(--white); }
+.approval-display { text-align: center; padding: 15px; }
+.approval-number { font-size: 28px; color: var(--green); text-shadow: 0 0 15px rgba(0,204,0,0.4); }
+.approval-label { font-size: 7px; color: var(--dim); margin-top: 8px; }
+.approval-meter { width: 100%; height: 12px; background: var(--dark-bg); border: 1px solid #333; margin-top: 12px; }
+.approval-meter-fill { height: 100%; transition: width 0.5s ease; }
+/* PARLIAMENT */
+.parliament-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.parliament-column { display: flex; flex-direction: column; }
+.parliament-column-header { font-size: 8px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+.parliament-column.govt .parliament-column-header { color: var(--green); border-color: var(--dark-green); }
+.parliament-column.oppo .parliament-column-header { color: var(--red); border-color: var(--dark-red); }
+.parliament-seat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 7px; }
+.parliament-party-color { width: 10px; height: 10px; border: 1px solid #555; flex-shrink: 0; }
+.parliament-party-name { color: var(--white); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.parliament-party-leader { font-size: 14px; flex-shrink: 0; }
+.parliament-bar-track { flex: 1; height: 10px; background: var(--dark-bg); border: 1px solid #333; min-width: 40px; }
+.parliament-bar-fill { height: 100%; transition: width 0.8s ease; }
+.parliament-seats { width: 60px; text-align: right; color: var(--white); flex-shrink: 0; }
+.parliament-majority-label { font-size: 7px; color: var(--dim); margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; }
+.bottom-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--dark-green); margin-top: 10px; flex-shrink: 0; }
+.next-turn-btn { font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 10px 24px; background: none; border: 2px solid var(--red); color: var(--red); cursor: pointer; transition: all 0.15s; }
+.next-turn-btn:hover { background: var(--red); color: var(--black); box-shadow: 0 0 20px rgba(204,0,0,0.5); }
+.status-msg { font-size: 7px; color: var(--dim); max-width: 400px; }
+/* ELECTION */
+#election-screen { flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; overflow-y: auto; }
+.election-title { font-size: 16px; color: var(--red); text-shadow: 2px 2px 0 var(--dark-red); text-align: center; }
+.election-subtitle { font-size: 8px; color: var(--dim); text-align: center; max-width: 500px; line-height: 2; }
+.election-results-box { border: 2px solid var(--dark-green); padding: 20px; width: 100%; max-width: 650px; background: rgba(0,40,0,0.06); }
+.election-results-title { font-size: 9px; color: var(--green); margin-bottom: 16px; text-align: center; }
+.election-result-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 7px; }
+.election-party-color { width: 12px; height: 12px; border: 1px solid #555; flex-shrink: 0; }
+.election-party-name { width: 130px; color: var(--white); flex-shrink: 0; }
+.election-bar-track { flex: 1; height: 14px; background: var(--dark-bg); border: 1px solid #333; }
+.election-bar-fill { height: 100%; transition: width 1.5s ease; }
+.election-pct { width: 40px; text-align: right; color: var(--white); }
+.election-seats-label { width: 65px; text-align: right; color: var(--dim); }
+.election-winner-msg { font-size: 8px; text-align: center; margin-top: 14px; padding: 12px; border: 1px solid; line-height: 2.2; }
+.election-winner-msg.won { color: var(--green); border-color: var(--dark-green); background: rgba(0,204,0,0.05); }
+.election-winner-msg.coalition { color: var(--gold); border-color: #665500; background: rgba(204,170,0,0.05); }
+.election-continue-btn { font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 30px; background: none; border: 2px solid var(--green); color: var(--green); cursor: pointer; transition: all 0.15s; margin-top: 10px; }
+.election-continue-btn:hover { background: var(--green); color: var(--black); box-shadow: 0 0 20px rgba(0,204,0,0.4); }
+/* COALITION */
+#coalition-screen { flex-direction: column; align-items: center; justify-content: flex-start; gap: 16px; padding: 20px; overflow-y: auto; }
+.coalition-title { font-size: 14px; color: var(--gold); text-shadow: 2px 2px 0 #665500; text-align: center; }
+.coalition-subtitle { font-size: 8px; color: var(--dim); text-align: center; max-width: 550px; line-height: 2.2; }
+.coalition-tally { font-size: 9px; color: var(--white); text-align: center; padding: 10px 20px; border: 1px solid var(--dim); background: rgba(255,255,255,0.03); min-width: 300px; }
+.coalition-tally .seats-num { font-size: 18px; display: inline-block; margin: 0 4px; }
+.coalition-tally .seats-num.enough { color: var(--green); text-shadow: 0 0 10px rgba(0,204,0,0.4); }
+.coalition-tally .seats-num.not-enough { color: var(--red); }
+.coalition-tally .needed { font-size: 7px; color: var(--dim); margin-top: 6px; }
+.coalition-parties { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 600px; }
+.coalition-party-card { border: 2px solid var(--dim); padding: 14px; display: flex; align-items: center; gap: 14px; transition: all 0.2s; }
+.coalition-party-card.available { border-color: var(--green); cursor: pointer; }
+.coalition-party-card.available:hover { background: rgba(0,204,0,0.06); }
+.coalition-party-card.unavailable { border-color: #333; opacity: 0.5; }
+.coalition-party-card.selected { border-color: var(--green); background: rgba(0,204,0,0.1); box-shadow: 0 0 12px rgba(0,204,0,0.2); cursor: pointer; }
+.coalition-party-card.blocked { border-color: var(--red); opacity: 0.4; }
+.coalition-leader-avatar { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 36px; flex-shrink: 0; border: 2px solid #444; background: rgba(0,0,0,0.3); }
+.coalition-party-info { flex: 1; }
+.coalition-party-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.coalition-party-name-row .party-name { font-size: 8px; color: var(--white); }
+.coalition-party-name-row .party-seats { font-size: 7px; color: var(--dim); }
+.coalition-leader-name { font-size: 7px; color: var(--dim); margin-bottom: 6px; font-style: italic; }
+.coalition-status { font-size: 7px; padding: 3px 8px; display: inline-block; }
+.coalition-status.willing { color: var(--green); border: 1px solid var(--dark-green); }
+.coalition-status.unwilling { color: var(--red); border: 1px solid var(--dark-red); }
+.coalition-status.blocked-status { color: var(--orange); border: 1px solid #664400; }
+.coalition-status.in-coalition { color: var(--green); background: rgba(0,204,0,0.1); border: 1px solid var(--green); }
+.coalition-reason { font-size: 6px; color: var(--dim); margin-top: 4px; }
+.coalition-confirm-btn { font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 30px; background: none; border: 2px solid var(--green); color: var(--green); cursor: pointer; transition: all 0.15s; }
+.coalition-confirm-btn:hover { background: var(--green); color: var(--black); box-shadow: 0 0 20px rgba(0,204,0,0.4); }
+.coalition-confirm-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.coalition-confirm-btn:disabled:hover { background: none; color: var(--green); box-shadow: none; }
+/* GAME OVER */
+#gameover-screen { flex-direction: column; align-items: center; justify-content: center; gap: 25px; padding: 40px; }
+.gameover-title { font-size: 18px; color: var(--red); text-shadow: 3px 3px 0 var(--dark-red); text-align: center; }
+.gameover-msg { font-size: 9px; color: var(--dim); text-align: center; max-width: 500px; line-height: 2.4; }
+.gameover-btn { font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 30px; background: none; border: 2px solid var(--red); color: var(--red); cursor: pointer; transition: all 0.15s; }
+.gameover-btn:hover { background: var(--red); color: var(--black); box-shadow: 0 0 20px rgba(204,0,0,0.4); }
+/* ===== BUDGET SCREEN ===== */
+#budget-screen { flex-direction: column; align-items: center; padding: 15px; overflow-y: auto; gap: 12px; }
+.budget-title { font-size: 14px; color: var(--gold); text-shadow: 2px 2px 0 #665500; text-align: center; flex-shrink: 0; }
+.budget-subtitle { font-size: 7px; color: var(--dim); text-align: center; flex-shrink: 0; }
+.budget-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 800px; }
+.budget-panel { border: 2px solid var(--dark-green); padding: 14px; background: rgba(0,40,0,0.06); }
+.budget-panel-title { font-size: 8px; color: var(--red); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--dark-red); }
+/* Tax options */
+.tax-option { border: 2px solid var(--dim); padding: 10px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+.tax-option:hover { border-color: var(--green); }
+.tax-option.selected { border-color: var(--green); background: rgba(0,204,0,0.08); box-shadow: 0 0 10px rgba(0,204,0,0.15); }
+.tax-option-name { font-size: 8px; color: var(--white); margin-bottom: 6px; }
+.tax-option-effect { font-size: 6px; color: var(--dim); line-height: 2; }
+/* Portfolio sliders */
+.portfolio-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 7px; }
+.portfolio-label { width: 80px; color: var(--white); flex-shrink: 0; }
+.portfolio-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 8px; background: var(--dark-bg); border: 1px solid #333; outline: none; cursor: pointer; }
+.portfolio-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--green); border: 1px solid #fff; cursor: pointer; }
+.portfolio-slider::-moz-range-thumb { width: 14px; height: 14px; background: var(--green); border: 1px solid #fff; cursor: pointer; }
+.portfolio-value { width: 55px; text-align: right; color: var(--green); flex-shrink: 0; }
+.portfolio-change { width: 45px; text-align: right; font-size: 6px; flex-shrink: 0; }
+.portfolio-change.up { color: var(--green); }
+.portfolio-change.down { color: var(--red); }
+.portfolio-change.neutral { color: var(--dim); }
+/* Budget summary */
+.budget-summary { border: 2px solid var(--gold); padding: 14px; width: 100%; max-width: 800px; background: rgba(204,170,0,0.04); }
+.budget-summary-title { font-size: 8px; color: var(--gold); margin-bottom: 10px; }
+.budget-summary-row { display: flex; justify-content: space-between; font-size: 7px; margin-bottom: 6px; }
+.budget-summary-row .bs-label { color: var(--dim); }
+.budget-summary-row .bs-value { color: var(--white); }
+.budget-summary-row .bs-value.surplus { color: var(--green); }
+.budget-summary-row .bs-value.deficit { color: var(--red); }
+.budget-divider { border: none; border-top: 1px solid #444; margin: 8px 0; }
+/* Impact preview */
+.budget-impact { border: 2px solid var(--dim); padding: 14px; width: 100%; max-width: 800px; background: rgba(255,255,255,0.02); }
+.budget-impact-title { font-size: 8px; color: var(--white); margin-bottom: 10px; }
+.impact-row { display: flex; justify-content: space-between; font-size: 6px; margin-bottom: 4px; }
+.impact-row .il { color: var(--dim); }
+.impact-row .iv { color: var(--white); }
+.impact-row .iv.pos { color: var(--green); }
+.impact-row .iv.neg { color: var(--red); }
+.budget-confirm-btn { font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 30px; background: none; border: 2px solid var(--green); color: var(--green); cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+.budget-confirm-btn:hover { background: var(--green); color: var(--black); box-shadow: 0 0 20px rgba(0,204,0,0.4); }
+.budget-confirm-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.budget-confirm-btn:disabled:hover { background: none; color: var(--green); box-shadow: none; }
+/* ===== EVENT CARD ===== */
+#event-screen { flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 20px; overflow-y: auto; }
+.event-card { border: 2px solid var(--gold); padding: 20px; width: 100%; max-width: 650px; background: rgba(204,170,0,0.04); }
+.event-card-header { font-size: 11px; color: var(--gold); text-shadow: 1px 1px 0 #665500; margin-bottom: 14px; text-align: center; }
+.event-card-summary { font-size: 7px; color: var(--white); line-height: 2.2; margin-bottom: 16px; text-align: center; }
+.event-options { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 650px; }
+.event-option { border: 2px solid var(--dim); padding: 14px; cursor: pointer; transition: all 0.2s; }
+.event-option:hover { border-color: var(--green); background: rgba(0,204,0,0.05); }
+.event-option-title { font-size: 8px; color: var(--white); margin-bottom: 10px; line-height: 2; }
+.event-option-effects { display: flex; flex-direction: column; gap: 3px; }
+.event-effect { font-size: 6px; display: flex; justify-content: space-between; }
+.event-effect .ef-label { color: var(--dim); }
+.event-effect .ef-value { }
+.event-effect .ef-value.pos { color: var(--green); }
+.event-effect .ef-value.neg { color: var(--red); }
+.event-effect .ef-value.neutral { color: var(--dim); }
+@media (max-width: 768px) {
+  .dashboard-grid, .budget-columns { grid-template-columns: 1fr; }
+  .game-title { font-size: 16px; }
+  .scroll-text { font-size: 9px; }
+}
+</style>
+</head>
+<body>
+<div id="title-screen" class="screen active">
+  <div class="title-star">★</div>
+  <div class="game-title">PARTY ON,<br>COMRADE!<br><br><span class="sub">A REVOLUTIONARY STRATEGY GAME</span></div>
+  <div class="blink-prompt" onclick="startGame()">[ PRESS TO BEGIN ]</div>
+</div>
+<div id="intro-screen" class="screen">
+  <div class="scroll-container">
+    <div class="scroll-text">
+      <span class="highlight">★ ★ ★</span><br><br>
+      VICTORY, COMRADE! YOU HAVE<br>LED YOUR PEOPLE IN REVOLUTION<br>AGAINST THE CORRUPT<br>RULING CLASS!<br><br>
+      THE PRESIDENT HAS FLED THE<br>COUNTRY AND WITH SOME -<br>EH, <span class="highlight">GENTLE PERSUASION</span> -<br>PARLIAMENT HAS RECOGNISED<br>YOU AS THEIR NEW LEADER!<br><br>
+      <span class="highlight">NOW, TO SECURE<br>THE REVOLUTION!</span><br><br><span class="highlight">★ ★ ★</span>
+    </div>
+  </div>
+  <button class="skip-btn" onclick="showCharScreen()">SKIP >></button>
+</div>
+<div id="char-screen" class="screen">
+  <div class="char-title">★ CHOOSE YOUR LEADER ★</div>
+  <div class="avatar-select">
+    <div class="avatar-option" onclick="selectAvatar('male', this)"><div class="avatar-pixel">🧔</div><div class="avatar-label">MALE</div></div>
+    <div class="avatar-option" onclick="selectAvatar('female', this)"><div class="avatar-pixel">👩</div><div class="avatar-label">FEMALE</div></div>
+  </div>
+  <div class="name-input-group">
+    <label>ENTER YOUR NAME, COMRADE:</label>
+    <input type="text" class="name-input" id="player-name" placeholder="YOUR NAME" maxlength="16" autocomplete="off">
+  </div>
+  <button class="btn btn-red" id="begin-btn" disabled onclick="beginGame()">★ BEGIN RULE ★</button>
+</div>
+<div id="election-screen" class="screen">
+  <div class="election-title">★ ELECTION DAY ★</div>
+  <div class="election-subtitle" id="election-subtitle"></div>
+  <div class="election-results-box">
+    <div class="election-results-title">PARLIAMENTARY RESULTS (250 SEATS)</div>
+    <div id="election-results"></div>
+    <div class="election-winner-msg" id="election-winner-msg"></div>
+  </div>
+  <button class="election-continue-btn" id="election-continue-btn" onclick="afterElectionResults()">CONTINUE →</button>
+</div>
+<div id="coalition-screen" class="screen">
+  <div class="coalition-title">★ COALITION TALKS ★</div>
+  <div class="coalition-subtitle">YOU LACK A MAJORITY. YOU MUST NEGOTIATE A COALITION TO GOVERN. SELECT PARTIES TO INVITE.</div>
+  <div class="coalition-tally" id="coalition-tally"></div>
+  <div class="coalition-parties" id="coalition-parties"></div>
+  <button class="coalition-confirm-btn" id="coalition-confirm-btn" disabled onclick="confirmCoalition()">FORM COALITION →</button>
+</div>
+<div id="budget-screen" class="screen">
+  <div class="budget-title">★ ANNUAL BUDGET ★</div>
+  <div class="budget-subtitle" id="budget-year-label"></div>
+  <div class="budget-columns">
+    <div class="budget-panel">
+      <div class="budget-panel-title">TAX POLICY</div>
+      <div id="tax-options"></div>
+      <div style="font-size:7px;color:var(--dim);margin-top:8px;">PROJECTED INCOME: <span id="projected-income" style="color:var(--green)"></span></div>
+    </div>
+    <div class="budget-panel">
+      <div class="budget-panel-title">SPENDING PORTFOLIOS</div>
+      <div id="portfolio-sliders"></div>
+      <div style="font-size:7px;color:var(--dim);margin-top:8px;">TOTAL SPENDING: <span id="total-spending" style="color:var(--green)"></span></div>
+    </div>
+  </div>
+  <div class="budget-summary" id="budget-summary"></div>
+  <div class="budget-impact" id="budget-impact"></div>
+  <button class="budget-confirm-btn" id="budget-confirm-btn" onclick="confirmBudget()">APPROVE BUDGET →</button>
+</div>
+<div id="event-screen" class="screen">
+  <div class="event-card">
+    <div class="event-card-header" id="event-title"></div>
+    <div class="event-card-summary" id="event-summary"></div>
+  </div>
+  <div class="event-options" id="event-options"></div>
+</div>
+<div id="gameover-screen" class="screen">
+  <div class="title-star">★</div>
+  <div class="gameover-title">GAME OVER</div>
+  <div class="gameover-msg" id="gameover-msg"></div>
+  <button class="gameover-btn" onclick="location.reload()">TRY AGAIN</button>
+</div>
+<div id="main-screen" class="screen">
+  <div class="top-bar">
+    <div class="top-bar-left"><div class="leader-info"><span class="leader-avatar-small" id="dash-avatar"></span><span id="dash-name"></span></div></div>
+    <div><div class="calendar" id="dash-date"></div><div class="turn-counter" id="dash-turn"></div></div>
+  </div>
+  <div class="dashboard-grid">
+    <div class="panel">
+      <div class="panel-title">★ NATIONAL STATUS</div>
+      <div class="stat-row"><span class="stat-label">TREASURY</span><span class="stat-value" id="stat-treasury"></span></div>
+      <div class="stat-row"><span class="stat-label">ECONOMY</span><span class="stat-value negative" id="stat-economy"></span></div>
+      <div class="stat-row"><span class="stat-label">TREND</span><span class="stat-value" id="stat-trend"></span></div>
+      <div class="stat-row"><span class="stat-label">BUDGET</span><span class="stat-value" id="stat-budget"></span></div>
+      <div class="approval-display">
+        <div class="approval-number" id="stat-approval"></div>
+        <div class="approval-label">PUBLIC APPROVAL</div>
+        <div class="approval-meter"><div class="approval-meter-fill" id="approval-bar"></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">★ FACTIONS</div>
+      <div id="faction-list"></div>
+    </div>
+    <div class="panel" id="parliament-panel" style="display:none; grid-column: 1 / -1;">
+      <div class="panel-title">★ PARLIAMENT (250 SEATS)</div>
+      <div class="parliament-columns">
+        <div class="parliament-column govt"><div class="parliament-column-header"><span class="col-label">★ GOVERNMENT</span><span class="col-seats" id="govt-seats"></span></div><div id="parliament-govt"></div></div>
+        <div class="parliament-column oppo"><div class="parliament-column-header"><span class="col-label">OPPOSITION</span><span class="col-seats" id="oppo-seats"></span></div><div id="parliament-oppo"></div></div>
+      </div>
+      <div class="parliament-majority-label" id="parliament-majority"></div>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <div class="status-msg" id="status-msg">THE REVOLUTION IS SECURED. FOR NOW.</div>
+    <button class="next-turn-btn" onclick="nextTurn()">NEXT MONTH →</button>
+  </div>
+</div>
+<script>
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const TOTAL_SEATS = 250;
+const MAJORITY = 126;
+
+const PARTY_LEADERS = {
+  traditionalist: { name: 'GENERAL VOLKOV',   avatar: '🎖️' },
+  centrist:       { name: 'DR. ELENA MIROVA', avatar: '👩‍⚕️' },
+  farmers:        { name: 'OLD MAN BARANOV',  avatar: '👨‍🌾' },
+  renewal:        { name: 'COLONEL ZHURKOV',  avatar: '🪖' }
+};
+
+const PARTIES = {
+  workers:        { name: "WORKER'S PARTY",      color: '#cc0000', icon: '✊', factions: ['revolutionaries','liberals'] },
+  traditionalist: { name: 'TRADITIONALIST PARTY', color: '#8888cc', icon: '🏛️', factions: ['conservatives','nationalists','liberals'] },
+  centrist:       { name: 'CENTRIST PARTY',       color: '#00aacc', icon: '⚖️', factions: ['liberals','conservatives'] },
+  farmers:        { name: "FARMER'S PARTY",       color: '#998855', icon: '🌾', factions: ['revolutionaries','liberals','conservatives','nationalists'], maxPct: 10 },
+  renewal:        { name: 'RENEWAL PARTY',        color: '#cc8800', icon: '🏴', factions: ['nationalists'] }
+};
+
+// Portfolio definitions with faction attitudes
+const PORTFOLIOS = {
+  health:      { name: 'HEALTH',      icon: '🏥', default: 10000000, positive: ['revolutionaries','liberals','nationalists'], negative: [] },
+  education:   { name: 'EDUCATION',   icon: '📚', default: 7000000,  positive: ['revolutionaries','liberals'], negative: [] },
+  defence:     { name: 'DEFENCE',     icon: '🛡️', default: 2000000,  positive: ['conservatives','nationalists'], negative: ['revolutionaries','liberals'] },
+  police:      { name: 'POLICE',      icon: '🚔', default: 2000000,  positive: ['conservatives','nationalists'], negative: ['revolutionaries'] },
+  industry:    { name: 'INDUSTRY',    icon: '🏭', default: 2000000,  positive: ['revolutionaries','nationalists'], negative: ['liberals','conservatives'] },
+  environment: { name: 'ENVIRONMENT', icon: '🌿', default: 1000000,  positive: ['revolutionaries','liberals'], negative: ['conservatives','nationalists'] },
+  culture:     { name: 'CULTURE',     icon: '🎭', default: 1000000,  positive: ['liberals'], negative: ['conservatives','nationalists'] }
+};
+
+let gameState = {
+  playerName: '', playerGender: '', turn: 0, month: 4, year: 2025,
+  treasury: 50000000, economicGrowth: -15,
+  factions: {
+    revolutionaries: { size: 0, approval: 100 },
+    liberals:        { size: 0, approval: 40 },
+    conservatives:   { size: 0, approval: 20 },
+    nationalists:    { size: 0, approval: 0 }
+  },
+  parliament: null, coalition: [], nextElectionTurn: 1,
+  consecutiveNegativeMonths: 0, consecutivePositiveMonths: 0,
+  factionDriftAccum: { revolutionaries: 0, liberals: 0, conservatives: 0, nationalists: 0 },
+  // Budget state
+  baseIncome: 30000000,
+  lastSpending: 25000000,
+  annualIncome: 30000000,
+  annualSpending: 25000000,
+  monthlyBudgetEffect: 0, // (income - spending) / 12, applied monthly
+  portfolios: {},          // current spending per portfolio
+  nextBudgetTurn: -1,      // set after first coalition
+  budgetSet: false,
+  taxPolicy: 'normal',     // persists between budgets
+  // Event tracking
+  pendingEvent: null,       // event to show this turn
+  firstBudgetDone: false,   // triggers first event
+  eventsCompleted: []       // IDs of completed events
+};
+
+let coalitionSelection = [];
+
+function randomBetween(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function initFactions() {
+  let rev = randomBetween(30, 40), lib = randomBetween(10, 30), con = randomBetween(20, 40), nat = randomBetween(10, 40);
+  let total = rev + lib + con + nat;
+  let revSize = Math.round((rev / total) * 100), libSize = Math.round((lib / total) * 100);
+  let conSize = Math.round((con / total) * 100), natSize = 100 - revSize - libSize - conSize;
+  let pa = revSize + libSize * 0.4 + conSize * 0.2;
+  while (pa <= 41 && natSize > 5) { revSize++; natSize--; pa = revSize + libSize * 0.4 + conSize * 0.2; }
+  gameState.factions.revolutionaries.size = revSize;
+  gameState.factions.liberals.size = libSize;
+  gameState.factions.conservatives.size = conSize;
+  gameState.factions.nationalists.size = natSize;
+  gameState.consecutiveNegativeMonths = 3;
+  gameState.consecutivePositiveMonths = 0;
+  // Init portfolios to defaults
+  for (const pk in PORTFOLIOS) gameState.portfolios[pk] = PORTFOLIOS[pk].default;
+}
+
+// ===== ELECTION =====
+function calculateElection() {
+  const f = gameState.factions;
+  let workersRaw = 0; const workersTake = {};
+  PARTIES.workers.factions.forEach(fk => { const take = (f[fk].approval / 100) * f[fk].size; workersRaw += take; workersTake[fk] = take; });
+  const remaining = {}; for (const fk in f) remaining[fk] = f[fk].size - (workersTake[fk] || 0);
+  const fc = {}; for (const fk in f) fc[fk] = 0;
+  for (const pk in PARTIES) { if (pk === 'workers') continue; PARTIES[pk].factions.forEach(fk => { fc[fk]++; }); }
+  const rawScores = { workers: workersRaw };
+  for (const pk in PARTIES) { if (pk === 'workers') continue; let s = 0; PARTIES[pk].factions.forEach(fk => { if (fc[fk] > 0 && remaining[fk] > 0) s += remaining[fk] / fc[fk]; }); rawScores[pk] = s; }
+  let totalRaw = 0; for (const pk in rawScores) totalRaw += rawScores[pk];
+  if (totalRaw > 0) { let fp = (rawScores.farmers / totalRaw) * 100; if (fp > 10) { const ex = rawScores.farmers - (totalRaw * 0.10); rawScores.farmers = totalRaw * 0.10; const oth = ['traditionalist','centrist','renewal']; const ot = oth.reduce((s, k) => s + rawScores[k], 0); if (ot > 0) oth.forEach(k => { rawScores[k] += ex * (rawScores[k] / ot); }); } }
+  let total = 0; for (const pk in rawScores) total += rawScores[pk];
+  const results = {}; let seatSum = 0; const keys = Object.keys(PARTIES);
+  keys.forEach((pk, i) => { const pct = total > 0 ? (rawScores[pk] / total) * 100 : 0; results[pk] = { pct: 0, seats: Math.round((pct / 100) * TOTAL_SEATS) }; if (i < keys.length - 1) seatSum += results[pk].seats; });
+  results[keys[keys.length - 1]].seats = TOTAL_SEATS - seatSum;
+  for (const pk in results) results[pk].pct = Math.round((results[pk].seats / TOTAL_SEATS) * 1000) / 10;
+  return results;
+}
+
+// ===== COALITION =====
+function calculatePublicApproval() { let t = 0; for (const k in gameState.factions) { t += (gameState.factions[k].size / 100) * gameState.factions[k].approval; } return Math.round(t); }
+
+function getCoalitionWillingness() {
+  const f = gameState.factions; const pa = calculatePublicApproval();
+  return {
+    traditionalist: { willing: f.conservatives.approval > 35, reason: f.conservatives.approval > 35 ? `CONSERVATIVE APPROVAL AT ${f.conservatives.approval}% (>35%)` : `CONSERVATIVE APPROVAL TOO LOW: ${f.conservatives.approval}% (NEED >35%)`, incompatible: ['centrist'] },
+    centrist: { willing: f.liberals.approval > 35, reason: f.liberals.approval > 35 ? `LIBERAL APPROVAL AT ${f.liberals.approval}% (>35%)` : `LIBERAL APPROVAL TOO LOW: ${f.liberals.approval}% (NEED >35%)`, incompatible: ['traditionalist'] },
+    farmers: { willing: pa > 40, reason: pa > 40 ? `PUBLIC APPROVAL AT ${pa}% (>40%)` : `PUBLIC APPROVAL TOO LOW: ${pa}% (NEED >40%)`, incompatible: [] },
+    renewal: { willing: false, reason: "WILL NEVER JOIN A COALITION WITH THE WORKER'S PARTY", incompatible: [] }
+  };
+}
+
+function canFormAnyCoalition() {
+  const will = getCoalitionWillingness(); const parl = gameState.parliament; const ws = parl.workers.seats;
+  const wp = Object.keys(will).filter(k => will[k].willing);
+  for (let mask = 1; mask < (1 << wp.length); mask++) {
+    const combo = []; for (let i = 0; i < wp.length; i++) if (mask & (1 << i)) combo.push(wp[i]);
+    let valid = true; for (const a of combo) { for (const b of combo) { if (a !== b && will[a].incompatible.includes(b)) { valid = false; break; } } if (!valid) break; }
+    if (!valid) continue;
+    if (ws + combo.reduce((s, k) => s + parl[k].seats, 0) >= MAJORITY) return true;
+  }
+  return false;
+}
+
+function isBlocked(pk, sel, will) { for (const s of sel) { if (will[s].incompatible.includes(pk) || will[pk].incompatible.includes(s)) return true; } return false; }
+
+function renderCoalitionScreen() {
+  coalitionSelection = [];
+  const will = getCoalitionWillingness(); const parl = gameState.parliament;
+  updateCoalitionTally(parl.workers.seats); renderCoalitionCards(will, parl); updateCoalitionConfirmBtn(parl.workers.seats);
+}
+
+function updateCoalitionTally(total) {
+  const el = document.getElementById('coalition-tally'); const enough = total >= MAJORITY;
+  el.innerHTML = `COALITION SEATS: <span class="seats-num ${enough ? 'enough' : 'not-enough'}">${total}</span> / ${TOTAL_SEATS}<div class="needed">${enough ? '✓ MAJORITY REACHED' : `NEED ${MAJORITY - total} MORE FOR MAJORITY`}</div>`;
+}
+
+function renderCoalitionCards(will, parl) {
+  const c = document.getElementById('coalition-parties'); c.innerHTML = '';
+  ['traditionalist','centrist','farmers','renewal'].forEach(pk => {
+    const p = PARTIES[pk]; const w = will[pk]; const leader = PARTY_LEADERS[pk]; const seats = parl[pk].seats;
+    const blocked = isBlocked(pk, coalitionSelection, will); const selected = coalitionSelection.includes(pk);
+    let cls = 'coalition-party-card', statusHtml = '';
+    if (selected) { cls += ' selected'; statusHtml = '<span class="coalition-status in-coalition">✓ IN COALITION</span>'; }
+    else if (!w.willing) { cls += ' unavailable'; statusHtml = '<span class="coalition-status unwilling">✗ UNWILLING</span>'; }
+    else if (blocked) { cls += ' blocked'; statusHtml = '<span class="coalition-status blocked-status">⚠ INCOMPATIBLE</span>'; }
+    else { cls += ' available'; statusHtml = '<span class="coalition-status willing">✓ WILLING</span>'; }
+    const card = document.createElement('div'); card.className = cls;
+    card.innerHTML = `<div class="coalition-leader-avatar" style="border-color:${p.color}">${leader.avatar}</div><div class="coalition-party-info"><div class="coalition-party-name-row"><span class="party-name" style="color:${p.color}">${p.icon} ${p.name}</span><span class="party-seats">(${seats} SEATS)</span></div><div class="coalition-leader-name">LEADER: ${leader.name}</div>${statusHtml}<div class="coalition-reason">${w.reason}${blocked && w.willing ? ' — BUT INCOMPATIBLE WITH CURRENT SELECTION' : ''}</div></div>`;
+    if ((w.willing && !blocked) || selected) card.onclick = () => toggleCoalitionParty(pk, will, parl);
+    c.appendChild(card);
+  });
+}
+
+function toggleCoalitionParty(pk, will, parl) {
+  const idx = coalitionSelection.indexOf(pk);
+  if (idx >= 0) coalitionSelection.splice(idx, 1); else coalitionSelection.push(pk);
+  renderCoalitionCards(will, parl);
+  const total = parl.workers.seats + coalitionSelection.reduce((s, k) => s + parl[k].seats, 0);
+  updateCoalitionTally(total); updateCoalitionConfirmBtn(total);
+}
+
+function updateCoalitionConfirmBtn(ts) {
+  const btn = document.getElementById('coalition-confirm-btn');
+  btn.disabled = ts < MAJORITY; btn.textContent = ts >= MAJORITY ? 'FORM COALITION →' : `NEED ${MAJORITY - ts} MORE SEATS`;
+}
+
+function confirmCoalition() {
+  gameState.coalition = [...coalitionSelection];
+  document.getElementById('parliament-panel').style.display = 'flex';
+  // Trigger first budget immediately after coalition
+  showBudget();
+}
+
+function gameOver(msg) { document.getElementById('gameover-msg').textContent = msg; showScreen('gameover-screen'); }
+
+// ===== SCREENS =====
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function startGame() { showScreen('intro-screen'); setTimeout(() => { if (document.getElementById('intro-screen').classList.contains('active')) showCharScreen(); }, 19000); }
+function showCharScreen() { showScreen('char-screen'); document.getElementById('player-name').focus(); }
+let selectedGender = null;
+function selectAvatar(gender, el) { selectedGender = gender; document.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); checkReady(); }
+document.getElementById('player-name').addEventListener('input', checkReady);
+function checkReady() { document.getElementById('begin-btn').disabled = !(selectedGender && document.getElementById('player-name').value.trim().length > 0); }
+function beginGame() { gameState.playerName = document.getElementById('player-name').value.trim().toUpperCase(); gameState.playerGender = selectedGender; initFactions(); showScreen('main-screen'); renderDashboard(); }
+
+// ===== ELECTION UI =====
+function showElection() {
+  const results = calculateElection(); gameState.parliament = results;
+  document.getElementById('election-subtitle').textContent = gameState.nextElectionTurn === 1 ? 'THE PEOPLE DEMAND REPRESENTATION! THE FIRST PARLIAMENTARY ELECTION IS HELD.' : 'THE PEOPLE GO TO THE POLLS. PARLIAMENT WILL BE DECIDED.';
+  const c = document.getElementById('election-results'); c.innerHTML = '';
+  Object.entries(results).sort((a, b) => b[1].seats - a[1].seats).forEach(([pk, data]) => {
+    const p = PARTIES[pk]; const row = document.createElement('div'); row.className = 'election-result-row';
+    row.innerHTML = `<div class="election-party-color" style="background:${p.color}"></div><div class="election-party-name">${p.icon} ${p.name}</div><div class="election-bar-track"><div class="election-bar-fill" style="width:0%;background:${p.color}" data-target="${(data.seats/TOTAL_SEATS)*100}"></div></div><div class="election-pct">${data.pct}%</div><div class="election-seats-label">${data.seats} SEATS</div>`;
+    c.appendChild(row);
+  });
+  const ws = results.workers.seats; const msg = document.getElementById('election-winner-msg'); const btn = document.getElementById('election-continue-btn');
+  if (ws >= MAJORITY) { msg.className = 'election-winner-msg won'; msg.textContent = `THE WORKER'S PARTY WINS A MAJORITY WITH ${ws} SEATS! THE REVOLUTION CONTINUES!`; btn.textContent = 'CONTINUE →'; btn.onclick = () => afterElectionResults(); }
+  else if (canFormAnyCoalition()) { msg.className = 'election-winner-msg coalition'; msg.textContent = `THE WORKER'S PARTY WINS ${ws} SEATS — NO MAJORITY. YOU MUST FORM A COALITION.`; btn.textContent = 'NEGOTIATE →'; btn.onclick = () => afterElectionResults(); }
+  else { msg.className = 'election-winner-msg coalition'; msg.innerHTML = `THE WORKER'S PARTY WINS ONLY ${ws} SEATS.<br>NO VIABLE COALITION EXISTS. THE REVOLUTION IS OVER.`; btn.textContent = 'ACCEPT DEFEAT'; btn.onclick = () => gameOver('YOU FAILED TO SECURE A PARLIAMENTARY MAJORITY. THE OPPOSITION HAS FORMED A GOVERNMENT WITHOUT YOU. THE REVOLUTION IS OVER, COMRADE.'); }
+  showScreen('election-screen');
+  setTimeout(() => { c.querySelectorAll('.election-bar-fill').forEach(bar => { bar.style.width = bar.dataset.target + '%'; }); }, 100);
+  gameState.nextElectionTurn = gameState.turn + 36;
+}
+
+function afterElectionResults() {
+  const ws = gameState.parliament.workers.seats;
+  if (ws >= MAJORITY) { gameState.coalition = []; document.getElementById('parliament-panel').style.display = 'flex'; showBudget(); }
+  else { showScreen('coalition-screen'); renderCoalitionScreen(); }
+}
+
+// ===== BUDGET SYSTEM =====
+let budgetDraft = { taxPolicy: 'normal', portfolios: {} };
+
+function showBudget() {
+  // Calculate income: base income adjusted by economic growth from previous year
+  if (gameState.budgetSet) {
+    // Subsequent budgets: income adjusts by economic growth %
+    gameState.baseIncome = Math.round(gameState.baseIncome * (1 + gameState.economicGrowth / 100));
+  }
+
+  budgetDraft.taxPolicy = gameState.taxPolicy;
+  budgetDraft.portfolios = {};
+  for (const pk in PORTFOLIOS) budgetDraft.portfolios[pk] = gameState.portfolios[pk];
+
+  document.getElementById('budget-year-label').textContent = `FISCAL YEAR ${gameState.year} — SET YOUR NATIONAL BUDGET`;
+
+  renderTaxOptions();
+  renderPortfolioSliders();
+  updateBudgetSummary();
+  showScreen('budget-screen');
+}
+
+function getIncomeForTax(policy) {
+  const base = gameState.baseIncome;
+  if (policy === 'low') return Math.round(base * 0.8);
+  if (policy === 'high') return Math.round(base * 1.2);
+  return base;
+}
+
+function renderTaxOptions() {
+  const c = document.getElementById('tax-options'); c.innerHTML = '';
+  const options = [
+    { key: 'low', name: '📉 LOW TAXES', effects: 'GOVERNMENT INCOME -20%' },
+    { key: 'normal', name: '📊 NORMAL TAXES', effects: 'NO CHANGE TO INCOME' },
+    { key: 'high', name: '📈 HIGH TAXES', effects: 'GOVERNMENT INCOME +20%' }
+  ];
+  options.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'tax-option' + (budgetDraft.taxPolicy === opt.key ? ' selected' : '');
+    div.innerHTML = `<div class="tax-option-name">${opt.name}</div><div class="tax-option-effect">${opt.effects}</div>`;
+    div.onclick = () => { budgetDraft.taxPolicy = opt.key; renderTaxOptions(); updateBudgetSummary(); };
+    c.appendChild(div);
+  });
+  document.getElementById('projected-income').textContent = formatMoney(getIncomeForTax(budgetDraft.taxPolicy));
+}
+
+function renderPortfolioSliders() {
+  const c = document.getElementById('portfolio-sliders'); c.innerHTML = '';
+  // Dynamic max: at least $20M or 80% of current projected income
+  const sliderMax = Math.max(20000000, Math.round(getIncomeForTax(budgetDraft.taxPolicy) * 0.8));
+  const step = 500000;
+  for (const pk in PORTFOLIOS) {
+    const p = PORTFOLIOS[pk]; const val = budgetDraft.portfolios[pk]; const def = gameState.portfolios[pk];
+    const pctChange = def > 0 ? Math.round(((val - def) / def) * 100) : 0;
+    const changeClass = pctChange > 0 ? 'up' : pctChange < 0 ? 'down' : 'neutral';
+    const changeText = pctChange > 0 ? `+${pctChange}%` : pctChange < 0 ? `${pctChange}%` : '—';
+    const row = document.createElement('div'); row.className = 'portfolio-row';
+    row.innerHTML = `<div class="portfolio-label">${p.icon} ${p.name}</div><input type="range" class="portfolio-slider" min="0" max="${sliderMax}" step="${step}" value="${val}" data-key="${pk}"><div class="portfolio-value">${formatMoney(val)}</div><div class="portfolio-change ${changeClass}">${changeText}</div>`;
+    row.querySelector('input').addEventListener('input', function() {
+      budgetDraft.portfolios[this.dataset.key] = parseInt(this.value);
+      renderPortfolioSliders(); updateBudgetSummary();
+    });
+    c.appendChild(row);
+  }
+  let totalSpend = 0; for (const pk in budgetDraft.portfolios) totalSpend += budgetDraft.portfolios[pk];
+  document.getElementById('total-spending').textContent = formatMoney(totalSpend);
+}
+
+function updateBudgetSummary() {
+  const income = getIncomeForTax(budgetDraft.taxPolicy);
+  let spending = 0; for (const pk in budgetDraft.portfolios) spending += budgetDraft.portfolios[pk];
+  const balance = income - spending;
+  const monthly = Math.round(balance / 12);
+
+  // Check if deficit would exceed treasury
+  const maxDeficit = gameState.treasury;
+  const annualDeficit = balance < 0 ? Math.abs(balance) : 0;
+  const canAfford = annualDeficit <= maxDeficit;
+
+  const s = document.getElementById('budget-summary');
+  s.innerHTML = `
+    <div class="budget-summary-title">BUDGET SUMMARY</div>
+    <div class="budget-summary-row"><span class="bs-label">GOVERNMENT INCOME</span><span class="bs-value">${formatMoney(income)}</span></div>
+    <div class="budget-summary-row"><span class="bs-label">GOVERNMENT SPENDING</span><span class="bs-value">${formatMoney(spending)}</span></div>
+    <hr class="budget-divider">
+    <div class="budget-summary-row"><span class="bs-label">ANNUAL BALANCE</span><span class="bs-value ${balance >= 0 ? 'surplus' : 'deficit'}">${balance >= 0 ? '+' : ''}${formatMoney(balance)}${balance >= 0 ? ' SURPLUS' : ' DEFICIT'}</span></div>
+    <div class="budget-summary-row"><span class="bs-label">MONTHLY EFFECT</span><span class="bs-value ${monthly >= 0 ? 'surplus' : 'deficit'}">${monthly >= 0 ? '+' : ''}${formatMoney(monthly)}/MO</span></div>
+    ${!canAfford ? '<div style="font-size:7px;color:var(--red);margin-top:8px;text-align:center;">⚠ DEFICIT EXCEEDS TREASURY — REDUCE SPENDING</div>' : ''}
+  `;
+
+  // Impact preview
+  renderBudgetImpact(spending);
+
+  // Enable/disable confirm
+  document.getElementById('budget-confirm-btn').disabled = !canAfford;
+}
+
+function calcSpendingGrowthEffect() {
+  // Calculate weighted spending change where industry has 2x weight
+  const oldSpending = gameState.lastSpending;
+  if (oldSpending <= 0) return 0;
+  let oldWeighted = 0, newWeighted = 0;
+  for (const pk in PORTFOLIOS) {
+    const weight = pk === 'industry' ? 2 : 1;
+    oldWeighted += gameState.portfolios[pk] * weight;
+    newWeighted += budgetDraft.portfolios[pk] * weight;
+  }
+  if (oldWeighted <= 0) return 0;
+  const weightedChange = ((newWeighted - oldWeighted) / oldWeighted) * 100;
+  return Math.round(weightedChange * 0.3 * 10) / 10;
+}
+
+function calcPortfolioApproval() {
+  // Each portfolio: cap at +2% positive, -1% negative per portfolio
+  const portApproval = { revolutionaries: 0, liberals: 0, conservatives: 0, nationalists: 0 };
+  for (const pk in PORTFOLIOS) {
+    const p = PORTFOLIOS[pk];
+    const oldVal = gameState.portfolios[pk];
+    const newVal = budgetDraft.portfolios[pk];
+    if (oldVal === 0) continue;
+    const pctChange = ((newVal - oldVal) / oldVal) * 100;
+    const tiers = pctChange / 10;
+    // Uncapped raw values per portfolio
+    p.positive.forEach(fk => {
+      const raw = tiers * 2;
+      portApproval[fk] += Math.max(-1, Math.min(2, Math.round(raw)));
+    });
+    p.negative.forEach(fk => {
+      const raw = -(tiers * 1);
+      portApproval[fk] += Math.max(-1, Math.min(2, Math.round(raw)));
+    });
+  }
+  return portApproval;
+}
+
+function renderBudgetImpact(newSpending) {
+  const growthFromSpending = calcSpendingGrowthEffect();
+
+  let taxGrowth = 0;
+  if (budgetDraft.taxPolicy === 'low') taxGrowth = 1;
+  if (budgetDraft.taxPolicy === 'high') taxGrowth = -1;
+
+  const totalGrowthChange = growthFromSpending + taxGrowth;
+  const projectedGrowth = Math.round((gameState.economicGrowth + totalGrowthChange) * 10) / 10;
+
+  // Tax approval
+  const taxApproval = { revolutionaries: 0, liberals: 0, conservatives: 0, nationalists: 0 };
+  if (budgetDraft.taxPolicy === 'low') { taxApproval.revolutionaries = -10; taxApproval.conservatives = 10; }
+  if (budgetDraft.taxPolicy === 'high') { taxApproval.revolutionaries = 10; taxApproval.liberals = -3; taxApproval.conservatives = -10; taxApproval.nationalists = -3; }
+
+  // Portfolio approval (capped)
+  const portApproval = calcPortfolioApproval();
+
+  // Total
+  const totalApproval = {};
+  for (const fk in taxApproval) totalApproval[fk] = taxApproval[fk] + portApproval[fk];
+
+  const fNames = { revolutionaries: 'REV', liberals: 'LIB', conservatives: 'CON', nationalists: 'NAT' };
+  const imp = document.getElementById('budget-impact');
+  let html = `<div class="budget-impact-title">PROJECTED IMPACT</div>`;
+  html += `<div class="impact-row"><span class="il">ECONOMIC GROWTH</span><span class="iv ${projectedGrowth >= 0 ? 'pos' : 'neg'}">${projectedGrowth >= 0 ? '+' : ''}${projectedGrowth}%</span></div>`;
+  html += `<div style="margin:6px 0;border-top:1px solid #333;"></div>`;
+  html += `<div class="impact-row"><span class="il">APPROVAL CHANGES</span><span class="iv"></span></div>`;
+  for (const fk in totalApproval) {
+    const v = totalApproval[fk];
+    if (v !== 0) {
+      html += `<div class="impact-row"><span class="il">${fNames[fk]}</span><span class="iv ${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${v}%</span></div>`;
+    }
+  }
+  imp.innerHTML = html;
+}
+
+function confirmBudget() {
+  const income = getIncomeForTax(budgetDraft.taxPolicy);
+  let spending = 0; for (const pk in budgetDraft.portfolios) spending += budgetDraft.portfolios[pk];
+
+  // Apply tax effects on growth
+  if (budgetDraft.taxPolicy === 'low') gameState.economicGrowth += 1;
+  if (budgetDraft.taxPolicy === 'high') gameState.economicGrowth -= 1;
+
+  // Apply spending effect on growth (industry weighted 2x)
+  gameState.economicGrowth += calcSpendingGrowthEffect();
+  gameState.economicGrowth = Math.round(gameState.economicGrowth * 10) / 10;
+
+  // Apply tax approval effects
+  if (budgetDraft.taxPolicy === 'low') {
+    gameState.factions.revolutionaries.approval = Math.max(0, Math.min(100, gameState.factions.revolutionaries.approval - 10));
+    gameState.factions.conservatives.approval = Math.max(0, Math.min(100, gameState.factions.conservatives.approval + 10));
+  }
+  if (budgetDraft.taxPolicy === 'high') {
+    gameState.factions.revolutionaries.approval = Math.max(0, Math.min(100, gameState.factions.revolutionaries.approval + 10));
+    gameState.factions.liberals.approval = Math.max(0, Math.min(100, gameState.factions.liberals.approval - 3));
+    gameState.factions.conservatives.approval = Math.max(0, Math.min(100, gameState.factions.conservatives.approval - 10));
+    gameState.factions.nationalists.approval = Math.max(0, Math.min(100, gameState.factions.nationalists.approval - 3));
+  }
+
+  // Apply portfolio approval effects (capped at +2/-1 per portfolio)
+  const portApproval = calcPortfolioApproval();
+  for (const fk in portApproval) {
+    gameState.factions[fk].approval = Math.max(0, Math.min(100, gameState.factions[fk].approval + portApproval[fk]));
+  }
+
+  // Store budget state
+  gameState.taxPolicy = budgetDraft.taxPolicy;
+  gameState.annualIncome = income;
+  gameState.annualSpending = spending;
+  gameState.lastSpending = spending;
+  gameState.monthlyBudgetEffect = Math.round((income - spending) / 12);
+  for (const pk in budgetDraft.portfolios) gameState.portfolios[pk] = budgetDraft.portfolios[pk];
+  gameState.budgetSet = true;
+  gameState.firstBudgetDone = true;
+  gameState.nextBudgetTurn = gameState.turn + 12;
+
+  showScreen('main-screen');
+  renderDashboard();
+}
+
+// ===== DASHBOARD =====
+function getApprovalColor(v) { return v >= 60 ? 'var(--green)' : v >= 30 ? 'var(--gold)' : 'var(--red)'; }
+function getApprovalClass(v) { return v >= 60 ? 'approval-high' : v >= 30 ? 'approval-mid' : 'approval-low'; }
+function formatMoney(n) {
+  if (n < 0) return '-' + formatMoney(-n);
+  return n >= 1e6 ? '$' + (n/1e6).toFixed(1) + 'M' : n >= 1e3 ? '$' + (n/1e3).toFixed(0) + 'K' : '$' + n;
+}
+
+function renderDashboard() {
+  document.getElementById('dash-avatar').textContent = gameState.playerGender === 'male' ? '🧔' : '👩';
+  document.getElementById('dash-name').textContent = gameState.playerName;
+  document.getElementById('dash-date').textContent = MONTHS[gameState.month] + ' ' + gameState.year;
+  document.getElementById('dash-turn').textContent = 'TURN ' + (gameState.turn + 1) + ' / 240';
+
+  document.getElementById('stat-treasury').textContent = formatMoney(gameState.treasury);
+  const ecoEl = document.getElementById('stat-economy');
+  ecoEl.textContent = (gameState.economicGrowth >= 0 ? '+' : '') + gameState.economicGrowth + '%';
+  ecoEl.className = 'stat-value ' + (gameState.economicGrowth >= 0 ? 'positive' : 'negative');
+
+  const trendEl = document.getElementById('stat-trend');
+  const negM = gameState.consecutiveNegativeMonths, posM = gameState.consecutivePositiveMonths;
+  if (negM >= 6 && gameState.economicGrowth < -5) { trendEl.textContent = '▼▼ SEVERE (' + negM + 'MO)'; trendEl.className = 'stat-value negative'; }
+  else if (negM >= 6) { trendEl.textContent = '▼ DECLINING (' + negM + 'MO)'; trendEl.className = 'stat-value negative'; }
+  else if (negM >= 3) { trendEl.textContent = '▼ STRUGGLING (' + negM + 'MO)'; trendEl.className = 'stat-value'; trendEl.style.color = 'var(--gold)'; }
+  else if (posM >= 6 && gameState.economicGrowth > 5) { trendEl.textContent = '▲▲ BOOMING (' + posM + 'MO)'; trendEl.className = 'stat-value positive'; }
+  else if (posM >= 6) { trendEl.textContent = '▲ GROWING (' + posM + 'MO)'; trendEl.className = 'stat-value positive'; }
+  else if (posM >= 3) { trendEl.textContent = '▲ RECOVERING (' + posM + 'MO)'; trendEl.className = 'stat-value'; trendEl.style.color = 'var(--gold)'; }
+  else { trendEl.textContent = '— STABLE'; trendEl.className = 'stat-value'; trendEl.style.color = 'var(--dim)'; }
+
+  // Budget line
+  const budgetEl = document.getElementById('stat-budget');
+  if (gameState.budgetSet) {
+    const bal = gameState.annualIncome - gameState.annualSpending;
+    budgetEl.textContent = (bal >= 0 ? '+' : '') + formatMoney(bal) + '/YR';
+    budgetEl.className = 'stat-value ' + (bal >= 0 ? 'positive' : 'negative');
+  } else {
+    budgetEl.textContent = 'NOT SET'; budgetEl.className = 'stat-value'; budgetEl.style.color = 'var(--dim)';
+  }
+
+  const approval = calculatePublicApproval();
+  document.getElementById('stat-approval').textContent = approval + '%';
+  document.getElementById('stat-approval').style.color = getApprovalColor(approval);
+  document.getElementById('approval-bar').style.width = approval + '%';
+  document.getElementById('approval-bar').style.background = getApprovalColor(approval);
+
+  const factionList = document.getElementById('faction-list'); factionList.innerHTML = '';
+  const names = { revolutionaries: '✊ REVOLUTIONARIES', liberals: '⚖️ LIBERALS', conservatives: '🏛️ CONSERVATIVES', nationalists: '🏴 NATIONALISTS' };
+  for (const key in gameState.factions) {
+    const f = gameState.factions[key]; const card = document.createElement('div'); card.className = 'faction-card ' + key;
+    card.innerHTML = `<div class="faction-name">${names[key]}</div><div class="faction-bars"><div class="bar-row"><span class="bar-label">SIZE</span><div class="bar-track"><div class="bar-fill size" style="width:${f.size}%"></div></div><span class="bar-value">${f.size}%</span></div><div class="bar-row"><span class="bar-label">APPROVAL</span><div class="bar-track"><div class="bar-fill ${getApprovalClass(f.approval)}" style="width:${f.approval}%"></div></div><span class="bar-value">${f.approval}%</span></div></div>`;
+    factionList.appendChild(card);
+  }
+  if (gameState.parliament) renderParliament();
+}
+
+function renderParliament() {
+  const gc = document.getElementById('parliament-govt'), oc = document.getElementById('parliament-oppo');
+  gc.innerHTML = ''; oc.innerHTML = '';
+  const govtP = ['workers', ...gameState.coalition], oppoP = Object.keys(PARTIES).filter(k => !govtP.includes(k));
+  let govtT = 0, oppoT = 0;
+  function makeRow(pk, data) {
+    const p = PARTIES[pk]; const leader = PARTY_LEADERS[pk]; const row = document.createElement('div'); row.className = 'parliament-seat-row';
+    row.innerHTML = `<div class="parliament-party-leader">${leader ? leader.avatar : '✊'}</div><div class="parliament-party-color" style="background:${p.color}"></div><div class="parliament-party-name">${p.name}</div><div class="parliament-bar-track"><div class="parliament-bar-fill" style="width:${(data.seats/TOTAL_SEATS)*100}%;background:${p.color}"></div></div><div class="parliament-seats">${data.seats}</div>`;
+    return row;
+  }
+  govtP.sort((a, b) => gameState.parliament[b].seats - gameState.parliament[a].seats);
+  oppoP.sort((a, b) => gameState.parliament[b].seats - gameState.parliament[a].seats);
+  govtP.forEach(pk => { const d = gameState.parliament[pk]; govtT += d.seats; gc.appendChild(makeRow(pk, d)); });
+  oppoP.forEach(pk => { const d = gameState.parliament[pk]; oppoT += d.seats; oc.appendChild(makeRow(pk, d)); });
+  document.getElementById('govt-seats').textContent = govtT + ' SEATS';
+  document.getElementById('oppo-seats').textContent = oppoT + ' SEATS';
+  const el = document.getElementById('parliament-majority');
+  if (gameState.parliament.workers.seats >= MAJORITY) el.innerHTML = `STATUS: <span style='color:var(--green)'>WORKER'S PARTY MAJORITY (${govtT} SEATS)</span>`;
+  else if (govtT >= MAJORITY) { const partners = gameState.coalition.map(k => PARTIES[k].name).join(' + '); el.innerHTML = `STATUS: <span style='color:var(--green)'>COALITION MAJORITY (${govtT} SEATS) — ${partners}</span>`; }
+  else el.innerHTML = `STATUS: <span style='color:var(--red)'>MINORITY GOVERNMENT (${govtT} SEATS)</span>`;
+}
+
+// ===== EVENT SYSTEM =====
+const EVENTS = [
+  {
+    id: 'rich_fleeing',
+    title: 'THE RICH PIGS ARE FLEEING!',
+    summary: 'Comrade, the bourgeois reactionaries are fleeing our revolution! Economic growth is collapsing as the rich are taking their assets and leaving! How will we proceed?',
+    trigger: 'first_budget',
+    options: [
+      {
+        text: 'Seize their assets and throw them in jail before they escape!',
+        effects: { treasury: 10000000, growth: -2.5, approval: { liberals: -10, conservatives: -20, nationalists: -20 } },
+        hiddenEffects: {}
+      },
+      {
+        text: "Allow them to leave... they'll come crawling back.",
+        effects: {},
+        hiddenEffects: { factionSize: { liberals: -2, conservatives: -2 } }
+      },
+      {
+        text: "Let's make new friends - offer business leaders cushy jobs in government.",
+        effects: { growth: 2.5, approval: { conservatives: 10, nationalists: 10, revolutionaries: -10 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'union_raise',
+    title: 'THE UNION LEADERS NEED A RAISE!',
+    summary: "Comrade, the General Secretaries of our trade unions say that they can't afford new shoes for their children. Perhaps we could find some spare cash to support our allies?",
+    trigger: 'random',
+    options: [
+      {
+        text: 'Nobody will notice some bank transfers to Switzerland.',
+        effects: { treasury: -1000000, growth: -1, approval: { revolutionaries: 5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'Send them away!',
+        effects: { approval: { liberals: 5 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'foreign_investment',
+    title: 'A CHANCE FOR FOREIGN INVESTMENT!',
+    summary: 'Comrade, an international firm have taken an interest in some of our natural resources. Perhaps we can provide some favourable terms for investment?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'Our resources belong to the workers!',
+        effects: { approval: { revolutionaries: 5, conservatives: -5, nationalists: 5, liberals: -5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'There is no harm in allowing this.',
+        effects: { growth: 2, approval: { conservatives: 5, liberals: 5, revolutionaries: -10, nationalists: -5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'Try to sweeten the deal - demand an up-front payment for our schools.',
+        effects: { treasury: 3000000, growth: 1, approval: { conservatives: 5, liberals: 5, revolutionaries: -5, nationalists: -5 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'bourgeois_poet',
+    title: 'A BOURGEOIS POET HAS HAD A SURPRISE HIT!',
+    summary: 'Comrade, a degenerate book of "poetry" criticising the revolution has become an airport bestseller. Our Minister of Culture wants to know how to respond?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'Free speech in the arts is absolute.',
+        effects: { growth: 0.5, approval: { revolutionaries: -2, liberals: -2, conservatives: -2, nationalists: -2 } },
+        hiddenEffects: { factionSize: { revolutionaries: -3 } }
+      },
+      {
+        text: 'We must find a revolutionary poet!',
+        effects: { treasury: -1000000 },
+        hiddenEffects: { factionSize: { revolutionaries: 3 } }
+      },
+      {
+        text: 'Ban this sick filth!',
+        effects: { growth: -1, approval: { liberals: -10 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'field_jackets',
+    title: 'OUR SOLDIERS NEED NEW FIELD JACKETS!',
+    summary: "Comrade, our Minister of Defence has once again complained about our underfunded military. He says the troops' field jackets imported from America are in last season's style! Shall we produce our own?",
+    trigger: 'random',
+    options: [
+      {
+        text: 'Open a luxury garment factory.',
+        effects: { treasury: -2000000, growth: 0.5, approval: { nationalists: 5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'A sweat shop will do.',
+        effects: { treasury: -1000000, growth: 0.5, approval: { revolutionaries: -5, nationalists: 5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: "What's wrong with old clothes?",
+        effects: { approval: { nationalists: -5 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'wall_street',
+    title: 'WALL STREET HAS DONE IT AGAIN!',
+    summary: 'Comrade, the American banks have once again been caught in a bubble! The global economy has hit a downturn and even we cannot escape. What shall we do?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'Guarantee jobs for our workers!',
+        effects: { treasury: -5000000, growth: -4, approval: { revolutionaries: 5, conservatives: -5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'We must live within our means...',
+        effects: { growth: -8, approval: { revolutionaries: -10, conservatives: 5 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'beachfront',
+    title: 'WE HAVE SOME GREAT BEACHFRONT REAL ESTATE!',
+    summary: "Comrade, the architect's plans are quite the attraction! A nice new hotel would attract tourists with deep pockets. Should we build this for the state, or attract some wealthy investors to pay up front?",
+    trigger: 'random',
+    options: [
+      {
+        text: 'The Revolutionary Hotel it is! Build it with public money.',
+        effects: { treasury: -1000000, growth: 1, approval: { revolutionaries: 3 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'It is important to attract foreign investment.',
+        effects: { growth: 0.5, approval: { conservatives: 3 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'We have enough tourists as it is!',
+        effects: { approval: { conservatives: -3, liberals: -3 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'tripadvisor',
+    title: "WE RECEIVED THE WORLD'S WORST TRIPADVISOR REVIEW!",
+    summary: 'Comrade, the reputation of our tourist industry is through the floor! What should we do to attract more visitors?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'A lavish PR campaign will win people round.',
+        effects: { treasury: -5000000, growth: -3 },
+        hiddenEffects: {}
+      },
+      {
+        text: 'We must invest more in our traditional culture to give visitors an unforgettable experience.',
+        effects: { treasury: -2000000, growth: -5 },
+        hiddenEffects: {}
+      },
+      {
+        text: 'We should focus on other things.',
+        effects: { growth: -8 },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'commodity_crisis',
+    title: 'COMMODITY CRISIS!',
+    summary: 'Comrade, the price of key goods has skyrocketed! This batch of inflation is making it harder for our industries to compete and they are passing price rises onto consumers. Who should we protect?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'Our industry must remain viable - let them pass on price rises.',
+        effects: { growth: -3, approval: { revolutionaries: -5, liberals: -3, nationalists: -3 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'Our people come first! Freeze prices and deal with the consequences.',
+        effects: { treasury: -1000000, growth: -3, approval: { revolutionaries: 5, nationalists: 5, liberals: -3 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'war_borders',
+    title: 'WAR NEAR OUR BORDERS!',
+    summary: 'Comrade, our allies are under unprovoked attack! Well - they are under attack. Shall we go to their aid?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'Send our troops now! Build munitions factories!',
+        effects: { treasury: -10000000, growth: 2, approval: { revolutionaries: 10, nationalists: 10, liberals: -20, conservatives: -10 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'Send them aid and supplies... but they can fight their own war.',
+        effects: { treasury: -5000000, approval: { revolutionaries: 2, nationalists: 2, liberals: -2, conservatives: -2 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'Give peace a chance, man.',
+        effects: { approval: { revolutionaries: -5, nationalists: -5, liberals: 5, conservatives: 5 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'miners_pensions',
+    title: "THE MINERS WANT THEIR PENSIONS!",
+    summary: "Comrade, the last government swindled our mineworkers out of their rightful pensions! But now they have turned up at our door looking for what is theirs... and the bill isn't cheap. Should we pay up?",
+    trigger: 'random',
+    options: [
+      {
+        text: 'Give them what is due!',
+        effects: { treasury: -4000000, approval: { revolutionaries: 4 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'Take it up with the last guy.',
+        effects: { approval: { revolutionaries: -4 } },
+        hiddenEffects: {}
+      }
+    ]
+  },
+  {
+    id: 'drought',
+    title: "IT HASN'T RAINED FOR MONTHS!",
+    summary: 'Comrade, it turns out that "climate change" might be a bigger issue than we\'d thought. Our crops are perishing in the fields and we are running out of food in the markets! What should we do?',
+    trigger: 'random',
+    options: [
+      {
+        text: 'Import food from abroad and get cash to our farmers.',
+        effects: { treasury: -8000000, growth: -5, approval: { revolutionaries: 5, nationalists: 5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'It\'s time for an aid appeal. We cannot be too proud.',
+        effects: { growth: -10, approval: { nationalists: -5 } },
+        hiddenEffects: {}
+      },
+      {
+        text: 'These things will work themselves out...',
+        effects: { growth: -15, approval: { revolutionaries: -20, liberals: -20, conservatives: -20, nationalists: -20 } },
+        hiddenEffects: {}
+      }
+    ]
+  }
+];
+
+function checkForEvent() {
+  // Priority 1: scripted first event after first budget
+  if (gameState.firstBudgetDone && !gameState.eventsCompleted.includes('rich_fleeing')) {
+    return EVENTS.find(e => e.id === 'rich_fleeing');
+  }
+
+  // Priority 2: 20% chance of a random event each month
+  if (Math.random() < 0.2) {
+    // Get all random events not yet completed
+    const available = EVENTS.filter(e => e.trigger === 'random' && !gameState.eventsCompleted.includes(e.id));
+    if (available.length > 0) {
+      return available[Math.floor(Math.random() * available.length)];
+    }
+  }
+
+  return null;
+}
+
+function showEvent(event) {
+  gameState.pendingEvent = event;
+  document.getElementById('event-title').textContent = '★ ' + event.title + ' ★';
+  document.getElementById('event-summary').textContent = event.summary;
+
+  const c = document.getElementById('event-options');
+  c.innerHTML = '';
+
+  const fNames = { revolutionaries: 'REV', liberals: 'LIB', conservatives: 'CON', nationalists: 'NAT' };
+
+  event.options.forEach((opt, idx) => {
+    const div = document.createElement('div');
+    div.className = 'event-option';
+
+    let effectsHtml = '<div class="event-option-effects">';
+    const eff = opt.effects;
+
+    // Treasury
+    if (eff.treasury) {
+      const pos = eff.treasury > 0;
+      effectsHtml += `<div class="event-effect"><span class="ef-label">TREASURY</span><span class="ef-value ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${formatMoney(eff.treasury)}</span></div>`;
+    }
+
+    // Growth
+    if (eff.growth) {
+      const pos = eff.growth > 0;
+      const projectedGrowth = Math.round((gameState.economicGrowth + eff.growth) * 10) / 10;
+      effectsHtml += `<div class="event-effect"><span class="ef-label">ECONOMIC GROWTH</span><span class="ef-value ${pos ? 'pos' : 'neg'}">${projectedGrowth >= 0 ? '+' : ''}${projectedGrowth}%</span></div>`;
+    }
+
+    // Approval
+    if (eff.approval) {
+      for (const fk in eff.approval) {
+        const v = eff.approval[fk];
+        if (v !== 0) {
+          effectsHtml += `<div class="event-effect"><span class="ef-label">${fNames[fk]} APPROVAL</span><span class="ef-value ${v > 0 ? 'pos' : 'neg'}">${v > 0 ? '+' : ''}${v}%</span></div>`;
+        }
+      }
+    }
+
+    // If no visible effects, show a neutral message
+    if (!eff.treasury && !eff.growth && !eff.approval) {
+      effectsHtml += `<div class="event-effect"><span class="ef-label">NO IMMEDIATE VISIBLE IMPACT</span><span class="ef-value neutral">—</span></div>`;
+    }
+
+    effectsHtml += '</div>';
+
+    div.innerHTML = `<div class="event-option-title">${idx + 1}. ${opt.text}</div>${effectsHtml}`;
+    div.onclick = () => resolveEvent(idx);
+    c.appendChild(div);
+  });
+
+  showScreen('event-screen');
+}
+
+function resolveEvent(optionIdx) {
+  const event = gameState.pendingEvent;
+  const opt = event.options[optionIdx];
+  const eff = opt.effects;
+  const hidden = opt.hiddenEffects || {};
+
+  // Apply visible effects
+  if (eff.treasury) gameState.treasury = Math.max(0, gameState.treasury + eff.treasury);
+  if (eff.growth) gameState.economicGrowth = Math.round((gameState.economicGrowth + eff.growth) * 10) / 10;
+  if (eff.approval) {
+    for (const fk in eff.approval) {
+      gameState.factions[fk].approval = Math.max(0, Math.min(100, gameState.factions[fk].approval + eff.approval[fk]));
+    }
+  }
+
+  // Apply hidden effects (faction size changes - not shown to player)
+  if (hidden.factionSize) {
+    // Apply changes and rebalance to keep total at 100%
+    let totalShift = 0;
+    for (const fk in hidden.factionSize) {
+      const change = hidden.factionSize[fk];
+      gameState.factions[fk].size = Math.max(1, gameState.factions[fk].size + change);
+      totalShift += change;
+    }
+    // Rebalance: distribute the opposite of totalShift among unaffected factions
+    if (totalShift !== 0) {
+      const unaffected = Object.keys(gameState.factions).filter(fk => !(fk in hidden.factionSize));
+      if (unaffected.length > 0) {
+        const perFaction = Math.round(-totalShift / unaffected.length);
+        let remainder = -totalShift - (perFaction * unaffected.length);
+        unaffected.forEach((fk, i) => {
+          const adj = perFaction + (i === 0 ? remainder : 0);
+          gameState.factions[fk].size = Math.max(1, gameState.factions[fk].size + adj);
+        });
+      }
+    }
+  }
+
+  gameState.eventsCompleted.push(event.id);
+  gameState.pendingEvent = null;
+
+  showScreen('main-screen');
+  renderDashboard();
+}
+
+// ===== MONTHLY MECHANICS =====
+function applyFactionSizeDrift() {
+  const keys = Object.keys(gameState.factions); const accum = gameState.factionDriftAccum; const mxd = 2 / 12;
+  keys.forEach(k => { accum[k] += (Math.random() * 2 - 1) * mxd; });
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (accum[k] >= 1 && gameState.factions[k].size < 60) {
+      const donors = keys.filter(d => d !== k && gameState.factions[d].size > 5);
+      if (donors.length > 0) { const d = donors[Math.floor(Math.random() * donors.length)]; gameState.factions[k].size++; gameState.factions[d].size--; accum[k] -= 1; accum[d] -= 1; }
+    } else if (accum[k] <= -1 && gameState.factions[k].size > 5) {
+      const recs = keys.filter(r => r !== k && gameState.factions[r].size < 60);
+      if (recs.length > 0) { const r = recs[Math.floor(Math.random() * recs.length)]; gameState.factions[k].size--; gameState.factions[r].size++; accum[k] += 1; accum[r] += 1; }
+    }
+  }
+}
+
+function applyEconomicApprovalEffects() {
+  if (gameState.economicGrowth < 0) { gameState.consecutiveNegativeMonths++; gameState.consecutivePositiveMonths = 0; }
+  else if (gameState.economicGrowth > 0) { gameState.consecutivePositiveMonths++; gameState.consecutiveNegativeMonths = 0; }
+  else { gameState.consecutiveNegativeMonths = 0; gameState.consecutivePositiveMonths = 0; }
+  let ac = 0;
+  if (gameState.consecutiveNegativeMonths >= 6) { ac = gameState.economicGrowth < -5 ? -3 : -1; }
+  if (gameState.consecutivePositiveMonths >= 6) { ac = gameState.economicGrowth > 5 ? 2 : 1; }
+  if (ac !== 0) { for (const k in gameState.factions) gameState.factions[k].approval = Math.max(0, Math.min(100, gameState.factions[k].approval + ac)); }
+  return ac;
+}
+
+function applyTreasuryChange() {
+  // Monthly budget effect (income - spending) / 12
+  const change = gameState.monthlyBudgetEffect;
+  gameState.treasury = Math.max(0, gameState.treasury + change);
+  return change;
+}
+
+function generateStatusMessage(ac, tc) {
+  const parts = [];
+  if (gameState.consecutiveNegativeMonths >= 6 && gameState.economicGrowth < -5) parts.push('SEVERE RECESSION — APPROVAL FALLING FAST');
+  else if (gameState.consecutiveNegativeMonths >= 6) parts.push('RECESSION DRAGS ON — APPROVAL DECLINING');
+  else if (gameState.consecutiveNegativeMonths >= 3) parts.push('THE ECONOMY STRUGGLES...');
+  else if (gameState.consecutivePositiveMonths >= 6 && gameState.economicGrowth > 5) parts.push('ECONOMIC BOOM — THE PEOPLE ARE PLEASED');
+  else if (gameState.consecutivePositiveMonths >= 6) parts.push('STEADY GROWTH — APPROVAL RISING');
+  else if (gameState.consecutivePositiveMonths >= 3) parts.push('THE ECONOMY SHOWS SIGNS OF RECOVERY');
+  if (tc < -500000) parts.push('TREASURY SHRINKING');
+  else if (tc > 500000) parts.push('TREASURY GROWING');
+  if (parts.length === 0) parts.push('ANOTHER MONTH PASSES...');
+  return parts.join(' — ');
+}
+
+function nextTurn() {
+  gameState.turn++;
+  gameState.month++;
+  if (gameState.month > 11) { gameState.month = 0; gameState.year++; }
+
+  applyFactionSizeDrift();
+  const ac = applyEconomicApprovalEffects();
+  const tc = applyTreasuryChange();
+
+  // Check for election first
+  if (gameState.turn >= gameState.nextElectionTurn) { showElection(); return; }
+
+  // Check for annual budget
+  if (gameState.budgetSet && gameState.turn >= gameState.nextBudgetTurn) { showBudget(); return; }
+
+  // Check for events
+  const event = checkForEvent();
+  if (event) { showEvent(event); return; }
+
+  document.getElementById('status-msg').textContent = generateStatusMessage(ac, tc);
+  renderDashboard();
+}
+</script>
+</body>
+</html>
